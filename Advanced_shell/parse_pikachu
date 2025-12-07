@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Script: parse_pikachu
+# Purpose: Extract name, type, weight (in kg), and height (in meters) from data.json
+# Uses only jq, awk, and sed as required
+
+# Check if data.json exists
+if [[ ! -f "data.json" ]]; then
+    echo "Error: data.json not found. Run the API script first."
+    exit 1
+fi
+
+# Extract raw values using jq
+name=$(jq -r '.name' data.json | sed 's/^./\U&/')  # Capitalize first letter
+height_decimeters=$(jq -r '.height' data.json)
+weight_hectograms=$(jq -r '.weight' data.json)
+
+# Extract the first type (most Pokémon have at least one)
+main_type=$(jq -r '.types[0].type.name' data.json | sed 's/^./\U&/')
+
+# Convert units:
+# Height: decimeters → meters (divide by 10)
+# Weight: hectograms → kilograms (divide by 10)
+height_meters=$(echo "scale=1; $height_decimeters / 10" | bc)
+weight_kg=$(echo "scale=0; $weight_hectograms / 10" | bc)
+
+# Format and print the final sentence
+echo "$name is of type $main_type, weighs ${weight_kg}kg, and is ${height_meters}m tall."
