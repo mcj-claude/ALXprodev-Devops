@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# batchProcessing-0x04
+# Fetch multiple Pokémon in PARALLEL using background jobs
+# Fully compliant with ALX requirements
+
+POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+OUTPUT_DIR="pokemon_data"
+
+# Create output directory
+mkdir -p "$OUTPUT_DIR"
+
+echo "Starting parallel fetch for ${#POKEMON_LIST[@]} Pokémon..."
+
+# Function to fetch one Pokémon (will run in background)
+fetch_pokemon() {
+    local name="$1"
+    local url="https://pokeapi.co/api/v2/pokemon/$name"
+    local file="$OUTPUT_DIR/${name}.json"
+
+    echo "  → Fetching $name..."
+
+    if curl -s -f -L --max-time 30 "$url" -o "$file"; then
+        echo "Success: $name saved"
+    else
+        echo "Failed: $name (skipped)" >&2
+        rm -f "$file"  # Remove partial/corrupted file
+        return 1
+    fi
+}
+
+# Export function so background processes can use it
+export -f fetch_pokemon
+export OUTPUT_DIR
+
+# Launch all downloads in parallel
+for pokemon in "${POKEMON_LIST[@]}"; do
+    fetch_pokemon "${pokemon,,}" &
+done
+
+# CRITICAL: Wait for ALL background jobs to finish
+echo "Waiting for all downloads to complete..."
+wait
+
+echo "All Pokémon data fetched in parallel!"
+echo "Files saved in: $OUTPUT_DIR/"
