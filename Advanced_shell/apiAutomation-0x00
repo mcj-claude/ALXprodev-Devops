@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# Script: apiAutomation-0x00
+# Purpose: Fetch Pikachu's data from PokeAPI and save to data.json
+#          Log errors to errors.txt on failure
+
+# URL for Pikachu (ID 25 or name "pikachu")
+URL="https://pokeapi.co/api/v2/pokemon/pikachu"
+
+# Output files
+DATA_FILE="data.json"
+ERROR_FILE="errors.txt"
+
+# Clear previous files (optional, but clean)
+> "$DATA_FILE"
+> "$ERROR_FILE"
+
+# Make the API request using curl
+# -s: silent mode (no progress bar)
+# -f: fail silently on HTTP errors (404, 500, etc.)
+# -L: follow redirects
+# -w "%{http_code}": output HTTP status code
+response=$(curl -s -f -L -w "%{http_code}" "$URL" -o "$DATA_FILE")
+
+# Capture the HTTP status code
+http_code="${response: -3}"
+
+# Check if request was successful (HTTP 2xx)
+if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
+    echo "Success: Data saved to $DATA_FILE"
+    # Optional: show a nice confirmation
+    echo "Pikachu data retrieved successfully!"
+else
+    # Request failed - log error
+    echo "Error: Failed to fetch data from PokeAPI." > "$ERROR_FILE"
+    echo "HTTP Status Code: $http_code" >> "$ERROR_FILE"
+    echo "Timestamp: $(date)" >> "$ERROR_FILE"
+    echo "URL attempted: $URL" >> "$ERROR_FILE"
+
+    # Also log curl's error message if available
+    curl_error=$(curl -s -f -L "$URL" 2>&1) || true
+    if [[ -n "$curl_error" ]]; then
+        echo "Details: $curl_error" >> "$ERROR_FILE"
+    fi
+
+    # Clean up empty or partial data file
+    > "$DATA_FILE"
+
+    echo "Request failed. Check $ERROR_FILE for details."
+    exit 1
+fi
